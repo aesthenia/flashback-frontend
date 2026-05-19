@@ -16,6 +16,7 @@ export function AuthProvider({ children }) {
   const [lastWsMessage, setLastWsMessage] = useState(null);
   const socketRef = useRef(null);
   const reconnectTimerRef = useRef(null);
+  const pendingWsRef = useRef([]);
 
   useEffect(() => {
     const savedToken = getStoredToken();
@@ -60,6 +61,15 @@ export function AuthProvider({ children }) {
         const message = JSON.parse(event.data);
         setLastWsMessage({ ...message, receivedAt: Date.now() });
 
+        if (message.event === "AUTH_OK") {
+          const pending = pendingWsRef.current;
+          pendingWsRef.current = [];
+          pending.forEach((msg) => {
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify(msg));
+            }
+          });
+        }
         if (message.event === "ONLINE_USERS") setOnlineUserIds(message.payload.userIds || []);
         if (message.event === "CAPSULE_VIEWERS") setCapsuleViewers(message.payload.viewers || []);
         if (
@@ -95,6 +105,8 @@ export function AuthProvider({ children }) {
     const socket = socketRef.current;
     if (socket?.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({ event, payload }));
+    } else {
+      pendingWsRef.current.push({ event, payload });
     }
   }
 

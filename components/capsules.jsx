@@ -298,6 +298,13 @@ export function CommentsPanel({ capsuleId }) {
   }, [capsuleId]);
 
   useEffect(() => {
+    if (!capsuleId) return;
+    if (lastWsMessage?.event === "AUTH_OK") {
+      sendWs("VIEW_CAPSULE", { capsuleId });
+    }
+  }, [lastWsMessage, capsuleId]);
+
+  useEffect(() => {
     if (!lastWsMessage) return;
     if (lastWsMessage.event === "COMMENT_CREATED") {
       setComments((current) => {
